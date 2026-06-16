@@ -1,6 +1,6 @@
 # Methodology: Colorado Energy Affordability & Insecurity Analysis (2022–2024)
 
-This document describes the data sources, filters, and computations behind the six summary
+This document describes the data sources, filters, and computations behind the seven summary
 datasets produced for Sierra Club's Colorado energy affordability work. It is intended for
 partner review and future analysts; it does not require reading the R source code.
 
@@ -9,14 +9,14 @@ partner review and future analysts; it does not require reading the R source cod
 ## 1. Overview
 
 The analysis quantifies Colorado residential energy costs, affordability, and insecurity
-across six themes: electric rates, natural gas prices, energy burden, energy insecurity,
-median household income, and disconnections for non-payment. The reference years are 2022
-and 2024 (or the closest available vintage per source).
+across seven themes: electric rates, natural gas prices, energy burden, energy insecurity,
+median household income, disconnections for non-payment, and utility profits. The reference
+years are 2022 and 2024 (or the closest available vintage per source).
 
 All source data are national in scope; each script filters to Colorado before computing
 summaries. Outputs are dated CSV files written to `outputs/`.
 
-The five R scripts run independently and in order:
+The seven R scripts run independently and in order:
 
 | Order | Script | Theme |
 |-------|--------|-------|
@@ -26,6 +26,7 @@ The five R scripts run independently and in order:
 | 04 | `R/04_energy_insecurity.R` | Energy insecurity |
 | 05 | `R/05_median_income.R` | Median household income |
 | 06 | `R/06_shutoffs.R` | Shutoffs (disconnections for non-payment) |
+| 07 | `R/07_utility_profits.R` | Utility profits |
 
 ---
 
@@ -41,6 +42,7 @@ The five R scripts run independently and in order:
 | Income (weights) | ACS 5-year — Table B11001 (total households) | U.S. Census Bureau | 2022 vintage (2018–2022); 2024 vintage (2020–2024) | `../../Data/us_census/acs/{year}/tract/B11001_co.csv` |
 | Shutoffs (state) | EIA Form 112 — Monthly Disconnections, state-level | U.S. Energy Information Administration | Data year 2024; cleaned 2026-04-20 | `../../Cleaned_Data/eia/112/20-04-2026-eia-112-shutoffs.csv` |
 | Shutoffs (utility) | EIA Form 112 — Annual Disconnections, utility-level with ownership | U.S. Energy Information Administration | Data year 2024; cleaned 2026-06-09 | `../../Cleaned_Data/eia/112/09-06-2026-eia-112-utility-annual.csv` |
+| Profits | EPI Utility Profits tracker (2021–2025) | Energy & Policy Institute | Last updated 2026-05-08 | `../../Data/epi/2021 - 2025 Utility Profits (Make a copy to edit) _ Last Updated 5_8_26.xlsx` (sheet "Data") |
 
 **Upstream pipelines.** The EIA and DOE LEAD cleaned files are produced by processors in
 `Internal/data-pipelines/eep-pipeline-core/processors/`. The ACS files are collected via
@@ -278,6 +280,43 @@ CO totals may not exactly match the state-level file's CO totals.
 
 ---
 
+### 3.7 Utility Profits (`07_utility_profits.R`, EPI)
+
+**Input:** EPI Utility Profits tracker Excel file, sheet "Data" — ~110 utility rows with a
+single header row. Profit figures are in $millions. The file is read with `readxl::read_excel()`
+and column names are standardized with `clean_names()`, yielding columns such as `utility`,
+`service_state_s`, `x2021_profit_millions`, `x2025_profit_millions`,
+`x2021_profit_portion_of_bill_percent`, and `x2025_profit_portion_of_bill_percent`.
+
+**Character-to-numeric conversion:** Profit and bill-share columns import as character because
+some rows contain the string `"N/A"`. All four metric columns are wrapped in `as.numeric()`,
+which converts `"N/A"` to `NA` automatically.
+
+**Filter:** `service_state_s` is a comma-separated list of state abbreviations. The script
+filters using `str_detect(service_state_s, "\\bCO\\b")` (word-boundary anchors) to match
+"CO" exactly without catching state codes that contain "CO" as a substring. This matches
+**one utility: "Xcel (electric subsidiaries)"**.
+
+**Derived metrics:**
+- `profit_change_musd = profit_2025_musd − profit_2021_musd`
+- `profit_pct_growth = profit_change_musd / profit_2021_musd × 100`
+- `bill_share_2021_pct = as.numeric(x2021_profit_portion_of_bill_percent) × 100`
+  (EPI stores shares as decimals, e.g. 0.1319; multiplying by 100 yields percentage points)
+- `bill_share_2025_pct = as.numeric(x2025_profit_portion_of_bill_percent) × 100`
+
+**Output shape:** One row (Xcel only), printed to console. No CSV is written; results are
+reported directly in `results.md`.
+
+**Caveats:**
+- Xcel's figures are an 8-state aggregate across its "electric subsidiaries" service territory
+  (CO, MI, MN, NM, ND, SD, TX, WI; HQ in Minnesota). They are not Colorado-specific profit.
+  Black Hills (which serves Colorado) appears in the EPI dataset under SD/WY/MT/NV only;
+  Tri-State and PSCo are absent. Xcel is the only Colorado-serving utility in the dataset.
+- EPI is an energy policy advocacy organization; treat figures as directionally indicative
+  rather than regulatory-grade financial data.
+
+---
+
 ## 4. Cross-Cutting Conventions
 
 - **R packages:** `tidyverse`, `janitor`; pipe operator `%>%`; column names standardized
@@ -302,6 +341,7 @@ CO totals may not exactly match the state-level file's CO totals.
 | `…-co-median-income-weighted.csv` | `05_median_income.R` | Household-weighted average median income for 2022 and 2024; absolute and % change; n_tracts and total_households per year |
 | `…-co-shutoffs-statewide.csv` | `06_shutoffs.R` | 2024 annual electric, gas, and combined shutoff totals; avg customer counts; annualized electric, gas, and combined shutoff rates |
 | `…-co-shutoffs-by-ownership.csv` | `06_shutoffs.R` | Electric, gas, and combined shutoffs and customer counts; % share of CO shutoffs; shutoff rates — per ownership type (IOU/Muni/Coop) |
+| *(none)* | `07_utility_profits.R` | No CSV produced; results (Xcel profit 2021 & 2025, change, bill share) are printed to console and reported directly in `results.md` |
 
 ---
 
@@ -318,9 +358,10 @@ Rscript R/03_energy_burden.R
 Rscript R/04_energy_insecurity.R
 Rscript R/05_median_income.R
 Rscript R/06_shutoffs.R
+Rscript R/07_utility_profits.R
 ```
 
-Scripts 01–04 and 06 have no prerequisites beyond the cleaned data files listed in Section 2.
+Scripts 01–04, 06, and 07 have no prerequisites beyond the source files listed in Section 2.
 
 ### Prerequisite for script 05: download B11001 household counts
 

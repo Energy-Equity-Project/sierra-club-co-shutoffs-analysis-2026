@@ -1,6 +1,6 @@
 # Results: Colorado Residential Energy Costs, Affordability & Insecurity
 
-This document summarizes findings from six analysis scripts covering Colorado residential
+This document summarizes findings from seven analysis scripts covering Colorado residential
 energy for reference years 2022 and 2024. All figures are drawn from the CSVs in `outputs/`
 (dated 16-06-2026). For data sources, computation methods, and caveats, see `METHODOLOGY.md`.
 
@@ -150,6 +150,29 @@ totals above, which come from a different source workbook.*
 
 ---
 
+## Utility Profits
+
+Source: Energy & Policy Institute (EPI) utility profits tracker, 2021–2025. Filtering the
+EPI dataset to utilities serving Colorado matches one entry: Xcel Energy ("electric
+subsidiaries"). Results are printed to console by `R/07_utility_profits.R`; no CSV is
+produced.
+
+| Metric | 2021 | 2025 | Change |
+|--------|------|------|--------|
+| Xcel profit ($ millions) | $1,478 | $1,870 | +$392 (+26.5%) |
+| Profit as share of customer bills | 13.19% | 15.38% | +2.2 pts |
+
+Xcel's profits grew approximately 26.5% from 2021 to 2025 while the profit share of the
+average customer bill rose from roughly 13% to 15% — context for the rate increases and
+disconnections documented above.
+
+*Xcel ("electric subsidiaries") figures are an aggregate across its eight-state service
+territory (CO, MI, MN, NM, ND, SD, TX, WI), not Colorado-only profit; it is the only
+Colorado-serving utility in the EPI dataset. Source: Energy & Policy Institute utility
+profits tracker.*
+
+---
+
 ## Summary
 
 Energy affordability burdens fall steeply by income: the lowest-income Colorado households
@@ -160,4 +183,6 @@ hardship in 2024. Statewide, 12% of households — roughly 265,000 — face ener
 exceeding the 6% affordability threshold. In 2024, Colorado utilities disconnected roughly
 139,000 residential customers for non-payment — an annualized combined rate of 5.4% — with
 municipal utility customers facing the highest shutoff rates and cooperative customers
-accounting for the largest share of total shutoffs.
+accounting for the largest share of total shutoffs. Over this same period, Xcel Energy's
+reported profits grew approximately 26.5% (from $1.5 billion to $1.9 billion), and the
+profit share of the average customer bill rose from ~13% to ~15%.
