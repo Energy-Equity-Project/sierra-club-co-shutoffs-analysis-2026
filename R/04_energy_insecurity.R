@@ -4,7 +4,7 @@ library(janitor)
 # ── Data — read only needed columns from large (~195 MB) file ─────────────────
 
 needed_cols <- c(
-  "state", "survey_year", "scram", "energy", "hse_temp", "enrgy_bill", "person_weight"
+  "state", "survey_year", "survey_wave", "energy", "hse_temp", "enrgy_bill", "person_weight"
 )
 
 pulse_raw <- read.csv(
@@ -12,7 +12,7 @@ pulse_raw <- read.csv(
   colClasses = c(
     state         = "character",
     survey_year   = "integer",
-    scram         = "character",
+    survey_wave   = "character",
     energy        = "character",
     hse_temp      = "character",
     enrgy_bill    = "character",
@@ -29,7 +29,7 @@ hardship_values <- c("almost_every_month", "some_months", "1_or_2_months")
 pulse_co <- pulse_raw %>%
   filter(state == "CO", survey_year == 2024)
 
-cycles <- sort(unique(pulse_co$scram))
+cycles <- sort(unique(pulse_co$survey_wave))
 message("Cycles found in CO 2024 data: ", paste(cycles, collapse = ", "))
 
 # ── Per-cycle weighted shares ─────────────────────────────────────────────────
@@ -64,7 +64,7 @@ compute_cycle_shares <- function(df_cycle, cycle_id) {
     sum(df_cycle$person_weight[composite_valid])
 
   tibble(
-    scram             = cycle_id,
+    survey_wave       = cycle_id,
     forgo_necessities = forgo_share,
     unsafe_temperature = unsafe_share,
     unable_to_pay     = unpaid_share,
@@ -73,12 +73,12 @@ compute_cycle_shares <- function(df_cycle, cycle_id) {
 }
 
 cycle_shares <- pulse_co %>%
-  split(.$scram) %>%
+  split(.$survey_wave) %>%
   imap(compute_cycle_shares) %>%
   compact() %>%
   bind_rows()
 
-contributing_cycles <- cycle_shares$scram
+contributing_cycles <- cycle_shares$survey_wave
 message(
   "Cycles contributing to averages: ",
   paste(contributing_cycles, collapse = ", ")
