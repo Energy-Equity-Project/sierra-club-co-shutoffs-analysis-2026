@@ -5,6 +5,8 @@
 .Ruserdata
 *.Rproj.user
 
+CLAUDE.md
+
 # Environment / secrets
 .Renviron
 
