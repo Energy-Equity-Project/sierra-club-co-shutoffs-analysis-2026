@@ -1,6 +1,6 @@
 # Methodology: Colorado Energy Affordability & Insecurity Analysis (2022–2024)
 
-This document describes the data sources, filters, and computations behind the five summary
+This document describes the data sources, filters, and computations behind the six summary
 datasets produced for Sierra Club's Colorado energy affordability work. It is intended for
 partner review and future analysts; it does not require reading the R source code.
 
@@ -9,9 +9,9 @@ partner review and future analysts; it does not require reading the R source cod
 ## 1. Overview
 
 The analysis quantifies Colorado residential energy costs, affordability, and insecurity
-across five themes: electric rates, natural gas prices, energy burden, energy insecurity, and
-median household income. The reference years are 2022 and 2024 (or the closest available
-vintage per source).
+across six themes: electric rates, natural gas prices, energy burden, energy insecurity,
+median household income, and disconnections for non-payment. The reference years are 2022
+and 2024 (or the closest available vintage per source).
 
 All source data are national in scope; each script filters to Colorado before computing
 summaries. Outputs are dated CSV files written to `outputs/`.
@@ -25,6 +25,7 @@ The five R scripts run independently and in order:
 | 03 | `R/03_energy_burden.R` | Energy burden |
 | 04 | `R/04_energy_insecurity.R` | Energy insecurity |
 | 05 | `R/05_median_income.R` | Median household income |
+| 06 | `R/06_shutoffs.R` | Shutoffs (disconnections for non-payment) |
 
 ---
 
@@ -38,6 +39,8 @@ The five R scripts run independently and in order:
 | Insecurity | Census Household Pulse Survey — harmonized energy microdata | U.S. Census Bureau | 2024 Phase 4, Cycles 01–09 | `../../Cleaned_Data/us_census/household_pulse_survey/02-04-2026-pulse-energy-puf-harmonized.csv` |
 | Income | ACS 5-year — Table B19013 (median household income) | U.S. Census Bureau | 2022 vintage (2018–2022); 2024 vintage (2020–2024) | `../../Data/us_census/acs/{year}/tract/B19013_co.csv` |
 | Income (weights) | ACS 5-year — Table B11001 (total households) | U.S. Census Bureau | 2022 vintage (2018–2022); 2024 vintage (2020–2024) | `../../Data/us_census/acs/{year}/tract/B11001_co.csv` |
+| Shutoffs (state) | EIA Form 112 — Monthly Disconnections, state-level | U.S. Energy Information Administration | Data year 2024; cleaned 2026-04-20 | `../../Cleaned_Data/eia/112/20-04-2026-eia-112-shutoffs.csv` |
+| Shutoffs (utility) | EIA Form 112 — Annual Disconnections, utility-level with ownership | U.S. Energy Information Administration | Data year 2024; cleaned 2026-06-09 | `../../Cleaned_Data/eia/112/09-06-2026-eia-112-utility-annual.csv` |
 
 **Upstream pipelines.** The EIA and DOE LEAD cleaned files are produced by processors in
 `Internal/data-pipelines/eep-pipeline-core/processors/`. The ACS files are collected via
@@ -207,6 +210,74 @@ identified by a `change_type` column.
 
 ---
 
+### 3.6 Shutoffs (`06_shutoffs.R`, EIA Form 112)
+
+EIA Form 112 (first published for data year 2024) collects monthly utility-reported
+disconnections for non-payment. The script produces two outputs from two complementary
+source files.
+
+#### (a) Statewide totals — annual basis
+
+**Input:** `20-04-2026-eia-112-shutoffs.csv` — monthly state-level disconnection data.
+
+**Filter:** State = `Colorado`; year = 2024 (12 monthly rows).
+
+**Aggregation:** Summed across all 12 months to produce annual totals:
+- `total_electric_shutoffs` = Σ monthly electric shutoffs
+- `total_gas_shutoffs` = Σ monthly gas shutoffs
+- `total_combined_shutoffs` = total electric + total gas
+- `avg_electric_customers` = mean monthly electric customer count
+- `avg_gas_customers` = mean monthly gas customer count
+
+Reporting shutoffs as annual totals (rather than monthly averages) is consistent with how
+disconnections are typically reported in policy contexts and makes the scale interpretable.
+
+**Derived rates (annualized):**
+- `combined_shutoff_rate = total_combined_shutoffs / avg_electric_customers`
+  (electric customers used as the denominator for the combined rate, reflecting the larger
+  and more comparable customer universe)
+- `electric_shutoff_rate = total_electric_shutoffs / avg_electric_customers`
+- `gas_shutoff_rate = total_gas_shutoffs / avg_gas_customers`
+
+**Output shape:** One statewide row.
+
+#### (b) By ownership type — utility-annual basis
+
+**Input:** `09-06-2026-eia-112-utility-annual.csv` — 2024 annual totals per utility × fuel,
+enriched with ownership type (`Investor Owned`, `Municipal`, `Cooperative`), 12-month mean
+customer counts, and a `bad_data_flag`.
+
+**Filter:** State = `CO`; rows with `bad_data_flag = "Y"` excluded. One CO row is flagged
+("Fort Morgan City of - CO", gas), consistent with the dataset's own percentile methodology.
+
+**Ownership labels:** Relabeled with `case_when()` to match the convention in script 01:
+`Investor Owned` → `IOU`, `Municipal` → `Muni`, `Cooperative` → `Coop`.
+
+**Aggregation:** Records are grouped by `ownership_label × energy_type`, then summed
+(`shutoffs`, `customer_count`). The result is pivoted wide so each ownership type occupies
+one row with separate electric and gas columns. Cooperative gas columns resolve to 0 (no CO
+coop gas utilities); zeros are preserved via `coalesce(., 0)`.
+
+**Derived metrics:**
+- `combined_shutoffs = shutoffs_electric + shutoffs_gas`
+- **Ownership shares** (within the utility-annual CO universe):
+  - `pct_electric_shutoffs = shutoffs_electric / Σ shutoffs_electric × 100`
+  - `pct_gas_shutoffs = shutoffs_gas / Σ shutoffs_gas × 100` (denominator excludes Coop which is 0)
+  - `pct_combined_shutoffs = combined_shutoffs / Σ combined_shutoffs × 100`
+- **Customer-weighted shutoff rates** (pooled-ratio — equivalent to a customer-weighted
+  average of utility-level rates):
+  - `electric_shutoff_rate = shutoffs_electric / customer_count_electric`
+  - `gas_shutoff_rate = shutoffs_gas / customer_count_gas` (NA for Coop, no gas customers)
+  - `combined_shutoff_rate = combined_shutoffs / customer_count_electric`
+
+**Reconciliation note:** Utility-level shares are computed within the utility-annual dataset.
+Because the two source workbooks differ and one bad-data row is excluded, the utility-annual
+CO totals may not exactly match the state-level file's CO totals.
+
+**Output shape:** Three rows — one per ownership type (IOU / Muni / Coop).
+
+---
+
 ## 4. Cross-Cutting Conventions
 
 - **R packages:** `tidyverse`, `janitor`; pipe operator `%>%`; column names standardized
@@ -229,6 +300,8 @@ identified by a `change_type` column.
 | `…-co-energy-burden-summary.csv` | `03_energy_burden.R` | Statewide total households, count with burden >6%, share with burden >6% |
 | `…-co-energy-insecurity.csv` | `04_energy_insecurity.R` | Share energy insecure (composite + three component metrics); n_cycles_used |
 | `…-co-median-income-weighted.csv` | `05_median_income.R` | Household-weighted average median income for 2022 and 2024; absolute and % change; n_tracts and total_households per year |
+| `…-co-shutoffs-statewide.csv` | `06_shutoffs.R` | 2024 annual electric, gas, and combined shutoff totals; avg customer counts; annualized electric, gas, and combined shutoff rates |
+| `…-co-shutoffs-by-ownership.csv` | `06_shutoffs.R` | Electric, gas, and combined shutoffs and customer counts; % share of CO shutoffs; shutoff rates — per ownership type (IOU/Muni/Coop) |
 
 ---
 
@@ -244,9 +317,10 @@ Rscript R/02_gas_prices_bills.R
 Rscript R/03_energy_burden.R
 Rscript R/04_energy_insecurity.R
 Rscript R/05_median_income.R
+Rscript R/06_shutoffs.R
 ```
 
-Scripts 01–04 have no prerequisites beyond the cleaned data files listed in Section 2.
+Scripts 01–04 and 06 have no prerequisites beyond the cleaned data files listed in Section 2.
 
 ### Prerequisite for script 05: download B11001 household counts
 

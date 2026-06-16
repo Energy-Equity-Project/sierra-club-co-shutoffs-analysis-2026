@@ -107,6 +107,49 @@ accordingly.*
 
 ---
 
+## Shutoffs (disconnections due to non-payment)
+
+Source: EIA Form 112, 2024 (first year of publication). Figures represent annual totals
+(sum of 12 monthly reports). The annualized combined rate uses electric customers as the
+denominator, reflecting the larger residential customer universe.
+
+### Statewide totals
+
+In 2024, Colorado utilities initiated approximately 138,966 residential disconnections for
+non-payment — 133,699 electric and 5,267 gas.
+
+| Metric | Value |
+|--------|-------|
+| Total electric shutoffs | 133,699 |
+| Total gas shutoffs | 5,267 |
+| Total combined shutoffs | 138,966 |
+| Annualized electric shutoff rate | 5.2% |
+| Annualized gas shutoff rate | 0.27% |
+| Annualized combined shutoff rate | 5.4% |
+
+### By utility ownership type
+
+The table below reports each ownership type's share of Colorado shutoffs and its
+customer-weighted shutoff rate, derived from EIA Form 112 utility-level data. Cooperative
+utilities in Colorado serve electricity only; the gas columns for Coop are not applicable.
+
+| Ownership | Electric shutoffs | Gas shutoffs | Combined shutoffs | % of combined | Electric rate | Gas rate | Combined rate |
+|-----------|------------------:|-------------:|------------------:|--------------:|--------------:|---------:|--------------:|
+| Coop      | 45,945            | 0            | 45,945            | 34.4%         | 7.0%          | N/A      | 7.0%          |
+| IOU       | 43,621            | 4,457        | 48,078            | 36.0%         | 3.0%          | 0.26%    | 3.3%          |
+| Muni      | 38,582            | 926          | 39,508            | 29.6%         | 9.2%          | 0.42%    | 9.4%          |
+
+Municipal utilities had the highest shutoff rates — 9.2% of electric customers and 9.4%
+combined — despite serving a smaller share of total customers. IOU customers were shut off
+at the lowest rate (3.3% combined). Cooperatives, which serve rural and agricultural
+communities, accounted for 34.4% of combined shutoffs at a 7.0% electric rate.
+
+*Note: ownership-level figures are computed within the utility-annual dataset (after
+excluding one bad-data row) and may not reconcile exactly with the statewide state-level
+totals above, which come from a different source workbook.*
+
+---
+
 ## Summary
 
 Energy affordability burdens fall steeply by income: the lowest-income Colorado households
@@ -114,4 +157,7 @@ spend roughly 19 cents of every dollar on energy, while the highest-income house
 about 1 cent. Even as gas bills fell and median incomes rose between 2022 and 2024, electric
 rates increased across all ownership types, and nearly 4 in 10 Coloradans reported energy
 hardship in 2024. Statewide, 12% of households — roughly 265,000 — face energy costs
-exceeding the 6% affordability threshold.
+exceeding the 6% affordability threshold. In 2024, Colorado utilities disconnected roughly
+139,000 residential customers for non-payment — an annualized combined rate of 5.4% — with
+municipal utility customers facing the highest shutoff rates and cooperative customers
+accounting for the largest share of total shutoffs.
